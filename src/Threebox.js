@@ -144,7 +144,7 @@
 			 this.overedObject; //overed object through mouseover
 			 this.overedFeature; //overed state for extrusion layer features
  
-			 this.lastCoords = [this.origin[0], this.origin[1], 3];
+			 this.lastCoords = [this.origin[0], this.origin[1], 1.5];
  
 			 let canvas = this.getCanvasContainer();
 			 this.getCanvasContainer().style.cursor = this.tb.defaultCursor;
@@ -256,6 +256,7 @@
  
 			 // onclick function
 			 this.onTap = this.onClick = function (e) { // create an onTap here
+				if (this.ring !== undefined) this.tb.remove(this.ring);
 				 let intersectionExists
 				 let intersects = [];
 				 if (map.tb.enableSelectingObjects) {
@@ -293,19 +294,33 @@
 							 this.draggedObject = null;
 							 this.selectedObject = null;
 							 this.tb.remove(this.ring);
+							 this.tb.remove(this.displayRing);
 							 return;
 						 }
  
-						 let geom = new THREE.RingGeometry(0.55, 0.6, 32);
-						 let material = new THREE.MeshBasicMaterial( { color: 0xffff00, side: THREE.DoubleSide } );
+						 let geom = new THREE.TorusGeometry(0.6, 0.15, 30, 25);
+						 let material = new THREE.MeshStandardMaterial( { color: 0xffc000, side: THREE.DoubleSide, transparent: true, opacity: 0 } );
 						 let mesh = new THREE.Mesh( geom, material );
-						 this.ring = tb.Object3D({ obj: mesh, anchor: 'center', bbox: false, tooltip: true });
+						 
+						 let geom2 = new THREE.TorusGeometry(0.6, 0.01, 30, 25);
+						 let material2 = new THREE.MeshStandardMaterial( { color: 0xffc000, side: THREE.DoubleSide } );
+						 let mesh2 = new THREE.Mesh( geom2, material2 );
+
+						 this.ring = tb.Object3D({ obj: mesh, anchor: 'center', bbox: false});
 						 this.ring.setCoords(this.lastCoords);
- 
+						 this.displayRing = tb.Object3D({ obj: mesh2, anchor: 'center', bbox: false});
+						 this.displayRing.setCoords(this.lastCoords);
+						 /* this.ring.addTooltip('Håll inne för att rotera', [true, 'right', true, 1]); */
+						
+						tb.add(this.displayRing);
 						tb.add(this.ring);
+						
 						this.ring.addEventListener('ObjectMouseOver', (e) => {
-							$('.mapboxgl-canvas-container').addClass('cursor-rotate');
-							$('.mapboxgl-canvas-container').removeAttr('style');
+							/* $('.mapboxgl-canvas-container').addClass('cursor-rotate'); */
+							/* $('.mapboxgl-canvas-container').removeAttr('style'); */
+							this.getCanvasContainer().style = '';
+							this.getCanvasContainer().classList.add('cursor-rotate');
+							mesh2.material.color.setHex(0xdb0202);
 							this.once('mousedown', HandleClick);
 							this.once('touchstart', HandleClick);
 							this.once('touchend', offClick);
@@ -315,13 +330,14 @@
 						this.ring.addEventListener('ObjectMouseOut', (e) => {
 							this.off('mousedown', HandleClick);
 							this.off('touchstart', HandleClick);
+							mesh2.material.color.setHex(0xffc000);
+							this.getCanvasContainer().classList.remove('cursor-rotate');
 						}, false);
 
 						function HandleClick(e) {
 							this.allowRotate = true;
 						}
 						function offClick(e) {
-							$('.mapboxgl-canvas-container').removeClass('cursor-rotate');
 							this.allowRotate = false;
 						}
 
@@ -370,6 +386,7 @@
 						 this.draggedObject = null;
 						 this.selectedObject = null;
 						 this.tb.remove(this.ring);
+						 this.tb.remove(this.displayRing);
 						 return;
 					 }
 				 } 
@@ -385,7 +402,7 @@
 					 if (!map.tb.enableRotatingObjects) return;
 					 draggedAction = 'rotate';
 					 // Set a UI indicator for dragging.
-					 this.getCanvasContainer().style.cursor = ''
+					 this.getCanvasContainer().style = '';
 					 var minX = Math.min(start.x, current.x),
 						 maxX = Math.max(start.x, current.x),
 						 minY = Math.min(start.y, current.y),
@@ -409,9 +426,9 @@
 					 // Capture the first xy coordinates, height must be the same to move on the same plane
 					 let coords = e.lngLat;
 					 let options = [Number((coords.lng + lngDiff).toFixed(this.tb.gridStep)), Number((coords.lat + latDiff).toFixed(this.tb.gridStep)), this.draggedObject.modelHeight];
-					 this.lastCoords = [options[0], options[1], 3]
+					 this.lastCoords = [options[0], options[1], 1.5]
 					 tb.world.children[1].setCoords(this.lastCoords);
-					 
+					 tb.world.children[2].setCoords(this.lastCoords);
 					 this.draggedObject.setCoords(options);
 					 if (map.tb.enableHelpTooltips) this.draggedObject.addHelp("lng: " + options[0] + "&#176;, lat: " + options[1] + "&#176;");
 					 return;
@@ -495,9 +512,25 @@
 					 time: new Date().getTime(),
 					 point: e.point
 				 };
+				 
+				 // emulate a hover event
+				 if (e.type == 'touchstart') {
+					let intersects = this.tb.queryRenderedFeatures(e.point);
+					if (typeof intersects[0] == 'object') {
+						let nearestObject = Threebox.prototype.findParent3DObject(intersects[0]);
+						this.outFeature(this.overedFeature);
+						if (nearestObject) {
+							nearestObject.over = true;
+							this.overedObject = nearestObject;
+						}
+					}
+				 }
  
 				 // Continue the rest of the function shiftkey or altkey are pressed, and if object is selected
-				 if (!this.selectedObject) return;
+				 if (!this.selectedObject) {
+					/* if (this.line !== undefined) {this.line.over = true; */
+					return;
+				 }
 				 if (!map.tb.enableDraggingObjects && !map.tb.enableRotatingObjects) return;
  
 				 e.preventDefault();
@@ -527,12 +560,16 @@
 			 this.onTouchEnd = this.onMouseUp = function (e) {
 
 				this.allowRotate = false;
+
+				if (e.type == 'touchend' && this.overedObject) {
+					this.outObject();
+				 }
  
 				 if (isTap(this.touchStartInfo, {
 					 time: new Date().getTime(),
 					 point: e.point
 				 })) {
-					 this.fire('tap', e);
+					 this.fire('tap', e); // tap event if touch was short enough
 					 return;
 				 }
  
