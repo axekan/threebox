@@ -144,7 +144,7 @@ Threebox.prototype = {
 			this.overedObject; //overed object through mouseover
 			this.overedFeature; //overed state for extrusion layer features
 
-			this.lastCoords = [this.origin[0], this.origin[1], 1.5];
+			if (this.lastCoords === undefined) this.lastCoords = [this.origin[0], this.origin[1], 1.5];
 
 			let canvas = this.getCanvasContainer();
 			this.getCanvasContainer().style.cursor = this.tb.defaultCursor;
