@@ -298,7 +298,7 @@
 							 return;
 						 }
  
-						 let geom = new THREE.TorusGeometry(0.6, 0.15, 30, 25);
+						 let geom = new THREE.TorusGeometry(0.6, 0.12, 30, 25);
 						 let material = new THREE.MeshStandardMaterial( { color: 0xffc000, side: THREE.DoubleSide, transparent: true, opacity: 0 } );
 						 let mesh = new THREE.Mesh( geom, material );
 						 
@@ -306,18 +306,16 @@
 						 let material2 = new THREE.MeshStandardMaterial( { color: 0xffc000, side: THREE.DoubleSide } );
 						 let mesh2 = new THREE.Mesh( geom2, material2 );
 
-						 this.ring = tb.Object3D({ obj: mesh, anchor: 'center', bbox: false});
+						 this.ring = tb.Object3D({ obj: mesh, anchor: 'center', bbox: false });
 						 this.ring.setCoords(this.lastCoords);
-						 this.displayRing = tb.Object3D({ obj: mesh2, anchor: 'center', bbox: false});
+						 this.displayRing = tb.Object3D({ obj: mesh2, anchor: 'center', bbox: false });
 						 this.displayRing.setCoords(this.lastCoords);
 						 /* this.ring.addTooltip('Håll inne för att rotera', [true, 'right', true, 1]); */
 						
 						tb.add(this.displayRing);
 						tb.add(this.ring);
 						
-						this.ring.addEventListener('ObjectMouseOver', (e) => {
-							/* $('.mapboxgl-canvas-container').addClass('cursor-rotate'); */
-							/* $('.mapboxgl-canvas-container').removeAttr('style'); */
+						this.ring.addEventListener('ObjectMouseOver', () => {
 							this.getCanvasContainer().style = '';
 							this.getCanvasContainer().classList.add('cursor-rotate');
 							mesh2.material.color.setHex(0xdb0202);
@@ -327,7 +325,7 @@
 							this.once('mouseup', offClick);
 						}, false);
 
-						this.ring.addEventListener('ObjectMouseOut', (e) => {
+						this.ring.addEventListener('ObjectMouseOut', () => {
 							this.off('mousedown', HandleClick);
 							this.off('touchstart', HandleClick);
 							mesh2.material.color.setHex(0xffc000);
@@ -340,6 +338,12 @@
 						function offClick(e) {
 							this.allowRotate = false;
 						}
+
+						this.once('cancel', () => {
+							this.allowRotate = false;
+							mesh2.material.color.setHex(0xffc000);
+							this.getCanvasContainer().classList.remove('cursor-rotate');
+						});
 
 						 this.selectedObject.dispatchEvent({ type: 'Wireframed', detail: this.selectedObject });
 						 this.selectedObject.dispatchEvent({ type: 'IsPlayingChanged', detail: this.selectedObject });
@@ -397,7 +401,7 @@
 				 let current = mousePos(e);
 				 this.getCanvasContainer().style.cursor = this.tb.defaultCursor;
 				 //check if being rotated
-				 if (this.allowRotate && this.draggedObject) { // this.allowRotate
+				 if ((this.allowRotate || e.originalEvent.altKey) && this.draggedObject) { // this.allowRotate
 				
 					 if (!map.tb.enableRotatingObjects) return;
 					 draggedAction = 'rotate';
@@ -460,7 +464,13 @@
 				 // if intersect exists, highlight it, if not check the extrusion layer
 				 if (intersectionExists) {
 					 let nearestObject = Threebox.prototype.findParent3DObject(intersects[0]);
-					 if (nearestObject) {
+					 if (nearestObject.userData.type != undefined && nearestObject.userData.type != null) {
+						if (this.overedObject) {
+							this.outObject();
+							this.fire('cancel');
+						}
+					 }
+						if (nearestObject) {
 						 this.outFeature(this.overedFeature);
 						 this.getCanvasContainer().style.cursor = 'pointer';
 						 if (!this.selectedObject || nearestObject.uuid != this.selectedObject.uuid) {
@@ -594,7 +604,8 @@
 			 }
  
 			 this.onMouseOut = function (e) {
-				 if (this.overedFeature) {
+				if (this.overedObject) this.outObject(); 
+				if (this.overedFeature) {
 					 let features = this.queryRenderedFeatures(e.point);
 					 if (features.length > 0 && this.overedFeature.id != features[0].id) {
 						 this.getCanvasContainer().style.cursor = this.tb.defaultCursor;
