@@ -402,7 +402,7 @@ Threebox.prototype = {
 				this.getCanvasContainer().style.cursor = this.tb.defaultCursor;
 				//check if being rotated
 				if ((this.allowRotate || e.originalEvent.altKey) && this.draggedObject) { // this.allowRotate
-
+					
 					if (!map.tb.enableRotatingObjects) return;
 					draggedAction = 'rotate';
 					// Set a UI indicator for dragging.
@@ -413,7 +413,7 @@ Threebox.prototype = {
 						maxY = Math.max(start.y, current.y);
 					//set the movement fluid we rotate only every 10px moved, in steps of 10 degrees up to 360
 					let rotation = { x: 0, y: 0, z: (Math.round(rotationDiff[2] + (~~((current.x - start.x) / this.tb.rotationStep) % 360 * this.tb.rotationStep) % 360)) };
-					//now rotate the model depending the axis
+					//now rotate the model depending the axis 
 					this.draggedObject.setRotation(rotation);
 					if (map.tb.enableHelpTooltips) this.draggedObject.addHelp("rot: " + rotation.z + "&#176;");
 					//this.draggedObject.setRotationAxis(rotation);
@@ -518,6 +518,23 @@ Threebox.prototype = {
 
 			this.onTouchStart = this.onMouseDown = function (e) {
 
+				let intersectionExists
+				let intersects = [];
+				if (map.tb.enableSelectingObjects) {
+					//raycast only if we are in a custom layer, for other layers go to the else, this avoids duplicated calls to raycaster
+					intersects = this.tb.queryRenderedFeatures(e.point);
+				}
+				intersectionExists = typeof intersects[0] == 'object';
+
+				if (!intersectionExists && this.selectedObject) {
+						this.unselectObject();
+						this.isDrawing = false;
+						this.draggedObject = null;
+						this.selectedObject = null;
+						this.tb.remove(this.ring);
+						this.tb.remove(this.displayRing);
+				}
+
 				this.touchStartInfo = {
 					time: new Date().getTime(),
 					point: e.point
@@ -538,7 +555,6 @@ Threebox.prototype = {
 
 				// Continue the rest of the function shiftkey or altkey are pressed, and if object is selected
 				if (!this.selectedObject) {
-					/* if (this.line !== undefined) {this.line.over = true; */
 					return;
 				}
 				if (!map.tb.enableDraggingObjects && !map.tb.enableRotatingObjects) return;
