@@ -147,7 +147,7 @@ Threebox.prototype = {
 			if (this.lastCoords === undefined) this.lastCoords = [this.origin[0], this.origin[1], 1.5];
 
 			let canvas = this.getCanvasContainer();
-			this.getCanvasContainer().style.cursor = this.tb.defaultCursor;
+			/* this.getCanvasContainer().style.cursor = this.tb.defaultCursor; */
 			// Variable to hold the starting xy coordinates
 			// when 'mousedown' occured.
 			let start;
@@ -316,7 +316,7 @@ Threebox.prototype = {
 						tb.add(this.ring);
 
 						this.ring.addEventListener('ObjectMouseOver', () => {
-							this.getCanvasContainer().style = '';
+							this.getCanvasContainer().style.removeProperty('cursor');
 							this.getCanvasContainer().classList.add('cursor-rotate');
 							mesh2.material.color.setHex(0xdb0202);
 							this.once('mousedown', HandleClick);
@@ -399,14 +399,14 @@ Threebox.prototype = {
 			this.onTouchMove = this.onMouseMove = function (e) {
 				// Capture the ongoing xy coordinates
 				let current = mousePos(e);
-				this.getCanvasContainer().style.cursor = this.tb.defaultCursor;
+				/* this.getCanvasContainer().style.cursor = this.tb.defaultCursor; */
 				//check if being rotated
 				if ((this.allowRotate || e.originalEvent.altKey) && this.draggedObject) { // this.allowRotate
 					
 					if (!map.tb.enableRotatingObjects) return;
 					draggedAction = 'rotate';
 					// Set a UI indicator for dragging.
-					this.getCanvasContainer().style = '';
+					this.getCanvasContainer().style.removeProperty('cursor');
 					var minX = Math.min(start.x, current.x),
 						maxX = Math.max(start.x, current.x),
 						minY = Math.min(start.y, current.y),
@@ -489,6 +489,7 @@ Threebox.prototype = {
 				}
 				else {
 					//clean the object overed
+					this.getCanvasContainer().style.removeProperty('cursor');
 					if (this.overedObject) { this.outObject(); }
 					//now let's check the extrusion layer objects
 					let features = [];
@@ -586,6 +587,7 @@ Threebox.prototype = {
 			this.onTouchEnd = this.onMouseUp = function (e) {
 
 				this.allowRotate = false;
+				this.getCanvasContainer().style.removeProperty('cursor');;
 
 				if (e.type == 'touchend' && this.overedObject) {
 					this.outObject();
@@ -600,7 +602,7 @@ Threebox.prototype = {
 				}
 
 				// Set a UI indicator for dragging.
-				this.getCanvasContainer().style.cursor = this.tb.defaultCursor;
+				/* this.getCanvasContainer().style.cursor = this.tb.defaultCursor; */
 
 				// Remove these events now that finish has been called.
 				//map.off('mousemove', onMouseMove);
@@ -620,11 +622,12 @@ Threebox.prototype = {
 			}
 
 			this.onMouseOut = function (e) {
+				this.getCanvasContainer().style.removeProperty('cursor');
 				if (this.overedObject) this.outObject();
 				if (this.overedFeature) {
 					let features = this.queryRenderedFeatures(e.point);
 					if (features.length > 0 && this.overedFeature.id != features[0].id) {
-						this.getCanvasContainer().style.cursor = this.tb.defaultCursor;
+						/* this.getCanvasContainer().style.cursor = this.tb.defaultCursor; */
 						//only unover when new feature is another
 						this.outFeature(features[0]);
 					}
