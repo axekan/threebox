@@ -144,7 +144,7 @@ Threebox.prototype = {
 			this.overedObject; //overed object through mouseover
 			this.overedFeature; //overed state for extrusion layer features
 
-			if (this.lastCoords === undefined) this.lastCoords = [this.origin[0], this.origin[1], 1.5];
+			//if (this.lastCoords === undefined) this.lastCoords = [this.origin[0], this.origin[1], 1.5];
 
 			let canvas = this.getCanvasContainer();
 			/* this.getCanvasContainer().style.cursor = this.tb.defaultCursor; */
@@ -257,6 +257,7 @@ Threebox.prototype = {
 			// onclick function
 			this.onTap = this.onClick = function (e) { // create an onTap here
 				if (this.ring !== undefined) this.tb.remove(this.ring);
+				if (this.displayRing !== undefined) this.tb.remove(this.displayRing);
 				let intersectionExists
 				let intersects = [];
 				if (map.tb.enableSelectingObjects) {
@@ -270,7 +271,7 @@ Threebox.prototype = {
 					this.isDrawing = true;
 
 					let nearestObject = Threebox.prototype.findParent3DObject(intersects[0]);
-
+					console.log({nearestObject});
 					if (nearestObject) {
 						//if extrusion object selected, unselect
 						if (this.selectedFeature) {
@@ -297,19 +298,21 @@ Threebox.prototype = {
 							this.tb.remove(this.displayRing);
 							return;
 						}
-
+					
+						// the actual ring
 						let geom = new THREE.TorusGeometry(0.6, 0.12, 30, 25);
 						let material = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.DoubleSide, transparent: true, opacity: 0 });
 						let mesh = new THREE.Mesh(geom, material);
 
+						// thinner ring for displaying
 						let geom2 = new THREE.TorusGeometry(0.6, 0.01, 30, 25);
 						let material2 = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.DoubleSide });
 						let mesh2 = new THREE.Mesh(geom2, material2);
 
 						this.ring = tb.Object3D({ obj: mesh, anchor: 'center', bbox: false });
-						this.ring.setCoords(this.lastCoords);
+						this.ring.setCoords(this.lastCoords[nearestObject.userData.id]);
 						this.displayRing = tb.Object3D({ obj: mesh2, anchor: 'center', bbox: false });
-						this.displayRing.setCoords(this.lastCoords);
+						this.displayRing.setCoords(this.lastCoords[nearestObject.userData.id]);
 						/* this.ring.addTooltip('Håll inne för att rotera', [true, 'right', true, 1]); */
 
 						tb.add(this.displayRing);
@@ -430,9 +433,13 @@ Threebox.prototype = {
 					// Capture the first xy coordinates, height must be the same to move on the same plane
 					let coords = e.lngLat;
 					let options = [Number((coords.lng + lngDiff).toFixed(this.tb.gridStep)), Number((coords.lat + latDiff).toFixed(this.tb.gridStep)), this.draggedObject.modelHeight];
-					this.lastCoords = [options[0], options[1], 1.5]
-					tb.world.children[1].setCoords(this.lastCoords);
-					tb.world.children[2].setCoords(this.lastCoords);
+					this.lastCoords[this.draggedObject.userData.id] = [options[0], options[1], 1.5]
+					console.log(this.draggedObject.userData.id);
+					tb.world.children.forEach((obj) => {
+						if (!obj.userData.id) {
+							obj.setCoords(this.lastCoords[this.draggedObject.userData.id]);
+						}
+					});
 					this.draggedObject.setCoords(options);
 					if (map.tb.enableHelpTooltips) this.draggedObject.addHelp("lng: " + options[0] + "&#176;, lat: " + options[1] + "&#176;");
 					return;
