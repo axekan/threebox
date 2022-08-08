@@ -267,11 +267,11 @@ Threebox.prototype = {
 				intersectionExists = typeof intersects[0] == 'object';
 				// if intersect exists, highlight it
 				if (intersectionExists) {
-
+					e.originalEvent.cancelBubble = true;
 					this.isDrawing = true;
+					this.fire('cancelActions');
 
 					let nearestObject = Threebox.prototype.findParent3DObject(intersects[0]);
-					console.log({nearestObject});
 					if (nearestObject) {
 						//if extrusion object selected, unselect
 						if (this.selectedFeature) {
@@ -434,7 +434,6 @@ Threebox.prototype = {
 					let coords = e.lngLat;
 					let options = [Number((coords.lng + lngDiff).toFixed(this.tb.gridStep)), Number((coords.lat + latDiff).toFixed(this.tb.gridStep)), this.draggedObject.modelHeight];
 					this.lastCoords[this.draggedObject.userData.id] = [options[0], options[1], 1.5]
-					console.log(this.draggedObject.userData.id);
 					tb.world.children.forEach((obj) => {
 						if (!obj.userData.id) {
 							obj.setCoords(this.lastCoords[this.draggedObject.userData.id]);
@@ -1091,6 +1090,7 @@ Threebox.prototype = {
 		if (this.map.selectedObject && obj.uuid == this.map.selectedObject.uuid) this.map.unselectObject();
 		if (this.map.draggedObject && obj.uuid == this.map.draggedObject.uuid) this.map.draggedObject = null;
 		if (obj.dispose) obj.dispose();
+		this.map.isDrawing = false;
 		this.world.remove(obj);
 		obj = null;
 	},
