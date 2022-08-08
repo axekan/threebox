@@ -21,7 +21,7 @@ const tube = require("./objects/tube.js");
 const LabelRenderer = require("./objects/LabelRenderer.js");
 const BuildingShadows = require("./objects/effects/BuildingShadows.js");
 
-import isTap from './utils/isTap';
+const isTap = require('./utils/isTap');
 
 function Threebox(map, glContext, options) {
 

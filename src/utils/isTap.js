@@ -1,9 +1,9 @@
-import euclideanDistance from './euclidian_distance';
+const euclideanDistance = require('./euclidian_distance');
 
-export const TAP_TOLERANCE = 25;
-export const TAP_INTERVAL = 250;
+const TAP_TOLERANCE = 25;
+const TAP_INTERVAL = 250;
 
-export default function isTap(start, end, options = {}) {
+function isTap(start, end, options = {}) {
   const tolerance = (options.tolerance != null) ? options.tolerance : TAP_TOLERANCE;
   const interval = (options.interval != null) ? options.interval : TAP_INTERVAL;
 
@@ -13,3 +13,5 @@ export default function isTap(start, end, options = {}) {
 
   return moveDistance < tolerance && (end.time - start.time) < interval;
 }
+
+module.exports = exports = isTap;
