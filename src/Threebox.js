@@ -160,21 +160,31 @@ Threebox.prototype = {
 			let altDiff; // difference between cursor and model height
 			let rotationDiff;
 
+			// https://stackoverflow.com/a/17165682/12519793
+			const getOffset = (ele, offsetDir) => {
+				let offset = 0;
+				do {
+					if (!isNaN(ele[offsetDir])) {
+						offset += ele[offsetDir];
+					}
+				} while (ele = ele.offsetParent);
+				return offset;
+			}
+
 			// Return the xy coordinates of the mouse position
 			function mousePos(e) {
-				var rect = canvas.getBoundingClientRect();
 				if (e.originalEvent.type.includes('touch')) {
 					const touch = e.originalEvent.targetTouches[0];
 					if (touch.clientX != null) {
 						return {
-							x: touch.clientX - rect.left - canvas.clientLeft,
-							y: touch.clientY - rect.top - canvas.clientTop
+							x: touch.pageX - getOffset(canvas, 'offsetLeft'),
+							y: touch.clientY - getOffset(canvas, 'offsetTop')
 						};
 					}
 				}
 				return {
-					x: e.originalEvent.clientX - rect.left - canvas.clientLeft,
-					y: e.originalEvent.clientY - rect.top - canvas.clientTop
+					x: e.originalEvent.clientX - getOffset(canvas, 'offsetLeft'),
+					y: e.originalEvent.clientY - getOffset(canvas, 'offsetTop')
 				};
 			}
 
@@ -267,6 +277,7 @@ Threebox.prototype = {
 				intersectionExists = typeof intersects[0] == 'object';
 				// if intersect exists, highlight it
 				if (intersectionExists) {
+					console.log('intersects');
 					e.originalEvent.cancelBubble = true;
 					this.isDrawing = true;
 					this.fire('cancelActions');
