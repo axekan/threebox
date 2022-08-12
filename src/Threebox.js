@@ -277,13 +277,31 @@ Threebox.prototype = {
 				intersectionExists = typeof intersects[0] == 'object';
 				// if intersect exists, highlight it
 				if (intersectionExists) {
-					console.log('intersects');
+
 					e.originalEvent.cancelBubble = true;
 					this.isDrawing = true;
 					this.fire('cancelActions');
 
 					let nearestObject = Threebox.prototype.findParent3DObject(intersects[0]);
 					if (nearestObject) {
+
+						/* let box = new THREE.Box3().setFromObject(nearestObject);
+						let size = new THREE.Vector3();
+						box.getSize(size);
+						console.log({size});
+						console.log({nearestObject}); */
+
+						/* let max = nearestObject.boundingBox.box.max;
+						let min = nearestObject.boundingBox.box.min;
+						let diag = new THREE.Vector3().subVectors(max, min);
+						let bboxRadius = diag.length() / 2;
+						console.log({bboxRadius}); */
+
+						//const ringSize = +(nearestObject.unitsPerMeter * Math.max(nearestObject.modelSize.x, nearestObject.modelSize.y) - 0.2).toFixed(2);
+						//const ringSize = +(Math.max(s.x, s.z) / 20).toFixed(2);
+						const ringSize = +(nearestObject.box3().max.y / 10).toFixed(3);
+						/* console.log("ringsize", ringSize); */
+
 						//if extrusion object selected, unselect
 						if (this.selectedFeature) {
 							this.unselectFeature(this.selectedFeature);
@@ -311,12 +329,12 @@ Threebox.prototype = {
 						}
 					
 						// the actual ring
-						let geom = new THREE.TorusGeometry(0.6, 0.12, 30, 25);
+						let geom = new THREE.TorusGeometry(ringSize, 0.12, 30, 25);
 						let material = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.DoubleSide, transparent: true, opacity: 0 });
 						let mesh = new THREE.Mesh(geom, material);
 
 						// thinner ring for displaying
-						let geom2 = new THREE.TorusGeometry(0.6, 0.01, 30, 25);
+						let geom2 = new THREE.TorusGeometry(ringSize, 0.01, 30, 25);
 						let material2 = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.DoubleSide });
 						let mesh2 = new THREE.Mesh(geom2, material2);
 
