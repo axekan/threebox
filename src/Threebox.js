@@ -285,23 +285,12 @@ Threebox.prototype = {
 					let nearestObject = Threebox.prototype.findParent3DObject(intersects[0]);
 					if (nearestObject) {
 
-						/* let box = new THREE.Box3().setFromObject(nearestObject);
-						let size = new THREE.Vector3();
-						box.getSize(size);
-						console.log({size});
-						console.log({nearestObject}); */
-
-						/* let max = nearestObject.boundingBox.box.max;
-						let min = nearestObject.boundingBox.box.min;
-						let diag = new THREE.Vector3().subVectors(max, min);
-						let bboxRadius = diag.length() / 2;
-						console.log({bboxRadius}); */
-
-						//const ringSize = +(nearestObject.unitsPerMeter * Math.max(nearestObject.modelSize.x, nearestObject.modelSize.y) - 0.2).toFixed(2);
-						//const ringSize = +(Math.max(s.x, s.z) / 20).toFixed(2);
-						const ringSize = +(nearestObject.box3().max.y / 10).toFixed(3);
-						/* console.log("ringsize", ringSize); */
-
+						const box = nearestObject.boundingBox.box;
+						const radius = box.min.distanceTo(box.max) / 40;
+						const ringSize = +(radius.toFixed(3)) + 0.1;
+						
+						//const ringSize = +(nearestObject.box3().max.y / 10).toFixed(3);
+						
 						//if extrusion object selected, unselect
 						if (this.selectedFeature) {
 							this.unselectFeature(this.selectedFeature);
@@ -334,7 +323,7 @@ Threebox.prototype = {
 						let mesh = new THREE.Mesh(geom, material);
 
 						// thinner ring for displaying
-						let geom2 = new THREE.TorusGeometry(ringSize, 0.01, 30, 25);
+						let geom2 = new THREE.TorusGeometry(ringSize, 0.0075, 30, 50);
 						let material2 = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.DoubleSide });
 						let mesh2 = new THREE.Mesh(geom2, material2);
 
