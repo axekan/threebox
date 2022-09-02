@@ -284,10 +284,10 @@ Threebox.prototype = {
 
 					let nearestObject = Threebox.prototype.findParent3DObject(intersects[0]);
 					if (nearestObject) {
-
-						const box = nearestObject.boundingBox.box;
-						const radius = box.min.distanceTo(box.max) / 40;
-						const ringSize = +(radius.toFixed(3)) + 0.1;
+						/* const box = nearestObject.boundingBox?.box;
+						const radius = box?.min.distanceTo(box?.max) / 40;
+						const ringSize = +(radius.toFixed(3)) + 0.1; */
+						const ringSize = 0.8;
 						
 						//const ringSize = +(nearestObject.box3().max.y / 10).toFixed(3);
 						
