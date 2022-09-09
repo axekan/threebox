@@ -123,9 +123,9 @@ Objects.prototype = {
 				if (typeof xyz === 'number') xyz = { z: xyz }
 
 				var r = {
-					x: utils.radify(xyz.x) || obj.rotation.x,
-					y: utils.radify(xyz.y) || obj.rotation.y,
-					z: utils.radify(xyz.z) || obj.rotation.z
+					x: utils.radify(xyz.x) ?? obj.rotation.x,
+					y: utils.radify(xyz.y) ?? obj.rotation.y,
+					z: utils.radify(xyz.z) ?? obj.rotation.z
 				}
 
 				obj._setObject({ rotation: [r.x, r.y, r.z] })
