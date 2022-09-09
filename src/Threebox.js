@@ -93,9 +93,10 @@ Threebox.prototype = {
 		this.lightLat = this.mapCenter.lat;
 		this.sunPosition;
 		this.rotationStep = 5;// degrees step size for rotation
-		this.gridStep = 6;// decimals to adjust the lnglat grid step, 6 = 11.1cm
+		this.gridStep = 7;// decimals to adjust the lnglat grid step, 6 = 11.1cm
 		this.altitudeStep = 0.1; // 1px = 0.1m = 10cm
 		this.defaultCursor = 'default';
+		this.ringHeight = 1.5;
 
 		this.lights = this.initLights;
 		if (this.options.defaultLights) this.defaultLights();
@@ -140,11 +141,9 @@ Threebox.prototype = {
 			this.selectedObject; //selected object through click
 			this.selectedFeature;//selected state id for extrusion layer features
 			this.draggedObject; //dragged object through mousedown + mousemove
-			let draggedAction; //dragged action to notify frontend
+			this.draggedAction; //dragged action to notify frontend
 			this.overedObject; //overed object through mouseover
 			this.overedFeature; //overed state for extrusion layer features
-
-			//if (this.lastCoords === undefined) this.lastCoords = [this.origin[0], this.origin[1], 1.5];
 
 			let canvas = this.getCanvasContainer();
 			/* this.getCanvasContainer().style.cursor = this.tb.defaultCursor; */
@@ -177,7 +176,7 @@ Threebox.prototype = {
 					const touch = e.originalEvent.targetTouches[0];
 					if (touch.clientX != null) {
 						return {
-							x: touch.pageX - getOffset(canvas, 'offsetLeft'),
+							x: touch.pageX   - getOffset(canvas, 'offsetLeft'),
 							y: touch.clientY - getOffset(canvas, 'offsetTop')
 						};
 					}
@@ -265,7 +264,7 @@ Threebox.prototype = {
 			}
 
 			// onclick function
-			this.onTap = this.onClick = function (e) { // create an onTap here
+			this.onTap = this.onClick = function (e) {
 				if (this.ring !== undefined) this.tb.remove(this.ring);
 				if (this.displayRing !== undefined) this.tb.remove(this.displayRing);
 				let intersectionExists
@@ -288,7 +287,7 @@ Threebox.prototype = {
 						const radius = box?.min.distanceTo(box?.max) / 40;
 						const ringSize = +(radius.toFixed(3)) + 0.1; */
 						const ringSize = 0.8;
-						
+
 						//const ringSize = +(nearestObject.box3().max.y / 10).toFixed(3);
 						
 						//if extrusion object selected, unselect
@@ -328,9 +327,9 @@ Threebox.prototype = {
 						let mesh2 = new THREE.Mesh(geom2, material2);
 
 						this.ring = tb.Object3D({ obj: mesh, anchor: 'center', bbox: false });
-						this.ring.setCoords(this.lastCoords[nearestObject.userData.id]);
+						this.ring.setCoords([...this.models[nearestObject.userData.id].position, this.tb.ringHeight]);
 						this.displayRing = tb.Object3D({ obj: mesh2, anchor: 'center', bbox: false });
-						this.displayRing.setCoords(this.lastCoords[nearestObject.userData.id]);
+						this.displayRing.setCoords([...this.models[nearestObject.userData.id].position, this.tb.ringHeight]);
 						/* this.ring.addTooltip('Håll inne för att rotera', [true, 'right', true, 1]); */
 
 						tb.add(this.displayRing);
@@ -423,18 +422,15 @@ Threebox.prototype = {
 				/* this.getCanvasContainer().style.cursor = this.tb.defaultCursor; */
 				//check if being rotated
 				if ((this.allowRotate || e.originalEvent.altKey) && this.draggedObject) { // this.allowRotate
-					
+
 					if (!map.tb.enableRotatingObjects) return;
-					draggedAction = 'rotate';
-					// Set a UI indicator for dragging.
+					this.draggedAction = 'rotate';
+					// Set a UI indicator for rotating
 					this.getCanvasContainer().style.removeProperty('cursor');
-					var minX = Math.min(start.x, current.x),
-						maxX = Math.max(start.x, current.x),
-						minY = Math.min(start.y, current.y),
-						maxY = Math.max(start.y, current.y);
+
 					//set the movement fluid we rotate only every 10px moved, in steps of 10 degrees up to 360
 					let rotation = { x: 0, y: 0, z: (Math.round(rotationDiff[2] + (~~((current.x - start.x) / this.tb.rotationStep) % 360 * this.tb.rotationStep) % 360)) };
-					//now rotate the model depending the axis 
+					//now rotate the model depending the axis
 					this.draggedObject.setRotation(rotation);
 					if (map.tb.enableHelpTooltips) this.draggedObject.addHelp("rot: " + rotation.z + "&#176;");
 					//this.draggedObject.setRotationAxis(rotation);
@@ -445,17 +441,18 @@ Threebox.prototype = {
 				if (this.draggedObject) {
 					if (!map.tb.enableDraggingObjects) return;
 
-					draggedAction = 'translate';
+					this.draggedAction = 'translate';
 					// Set a UI indicator for dragging.
 					this.getCanvasContainer().style.cursor = 'move';
 					// Capture the first xy coordinates, height must be the same to move on the same plane
 					let coords = e.lngLat;
 					let options = [Number((coords.lng + lngDiff).toFixed(this.tb.gridStep)), Number((coords.lat + latDiff).toFixed(this.tb.gridStep)), this.draggedObject.modelHeight];
-					this.lastCoords[this.draggedObject.userData.id] = [options[0], options[1], 1.5]
+					
+					// move ring(s) along with the object being dragged
+					// the rings don't have an id in userData
 					tb.world.children.forEach((obj) => {
-						if (!obj.userData.id) {
-							obj.setCoords(this.lastCoords[this.draggedObject.userData.id]);
-						}
+						if (obj.userData.id != null) return;
+						obj.setCoords([options[0], options[1], this.tb.ringHeight]);
 					});
 					this.draggedObject.setCoords(options);
 					if (map.tb.enableHelpTooltips) this.draggedObject.addHelp("lng: " + options[0] + "&#176;, lat: " + options[1] + "&#176;");
@@ -611,7 +608,7 @@ Threebox.prototype = {
 			this.onTouchEnd = this.onMouseUp = function (e) {
 
 				this.allowRotate = false;
-				this.getCanvasContainer().style.removeProperty('cursor');;
+				this.getCanvasContainer().style.removeProperty('cursor');
 
 				if (e.type == 'touchend' && this.overedObject) {
 					this.outObject();
@@ -638,10 +635,10 @@ Threebox.prototype = {
 				this.touchZoomRotate.enable();
 
 				if (this.draggedObject) {
-					this.draggedObject.dispatchEvent({ type: 'ObjectDragged', detail: { draggedObject: this.draggedObject, draggedAction: draggedAction } });
+					this.draggedObject.dispatchEvent({ type: 'ObjectDragged', detail: { draggedObject: this.draggedObject, draggedAction: this.draggedAction } });
 					this.draggedObject.removeHelp();
 					this.draggedObject = null;
-					draggedAction = null;
+					this.draggedAction = null;
 				};
 			}
 
