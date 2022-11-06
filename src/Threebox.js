@@ -283,12 +283,13 @@ Threebox.prototype = {
 
 					let nearestObject = Threebox.prototype.findParent3DObject(intersects[0]);
 					if (nearestObject) {
-						/* const box = nearestObject.boundingBox?.box;
-						const radius = box?.min.distanceTo(box?.max) / 40;
-						const ringSize = +(radius.toFixed(3)) + 0.1; */
-						const ringSize = 0.8;
 
-						//const ringSize = +(nearestObject.box3().max.y / 10).toFixed(3);
+						// calculate radius of ring from the bbox of the object
+						const ringRadius = 0.0075;
+						const size = nearestObject.getSize();
+						let hyp = Math.sqrt(Math.pow(size.x, 2) + Math.pow(size.y, 2));
+						let ringSize = (hyp / 2) * tb.projectedUnitsPerMeter(map.getCenter().lat) + ringRadius;
+						ringSize = +(ringSize * 1.15).toFixed(5);
 						
 						//if extrusion object selected, unselect
 						if (this.selectedFeature) {
@@ -318,16 +319,17 @@ Threebox.prototype = {
 					
 						// the actual ring
 						let geom = new THREE.TorusGeometry(ringSize, 0.12, 30, 25);
-						let material = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.DoubleSide, transparent: true, opacity: 0 });
+						let material = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.DoubleSide, transparent: true, opacity: 0 }); 
 						let mesh = new THREE.Mesh(geom, material);
 
 						// thinner ring for displaying
-						let geom2 = new THREE.TorusGeometry(ringSize, 0.0075, 30, 50);
+						let geom2 = new THREE.TorusGeometry(ringSize, ringRadius, 30, 50);
 						let material2 = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.DoubleSide });
 						let mesh2 = new THREE.Mesh(geom2, material2);
 
 						this.ring = tb.Object3D({ obj: mesh, anchor: 'center', bbox: false });
-						this.ring.setCoords([...this.models[nearestObject.userData.id].position, this.tb.ringHeight]);
+						this.ring.setCoords([...this.models[nearestObject.userData.id].position, 0]);
+						this.ring.userData.ring = "hidden";
 						this.displayRing = tb.Object3D({ obj: mesh2, anchor: 'center', bbox: false });
 						this.displayRing.setCoords([...this.models[nearestObject.userData.id].position, this.tb.ringHeight]);
 						/* this.ring.addTooltip('Håll inne för att rotera', [true, 'right', true, 1]); */
@@ -452,7 +454,8 @@ Threebox.prototype = {
 					// the rings don't have an id in userData
 					tb.world.children.forEach((obj) => {
 						if (obj.userData.id != null) return;
-						obj.setCoords([options[0], options[1], this.tb.ringHeight]);
+						if (obj.userData.ring == 'hidden') obj.setCoords([options[0], options[1], 0]);
+						else obj.setCoords([options[0], options[1], this.tb.ringHeight]);
 					});
 					this.draggedObject.setCoords(options);
 					if (map.tb.enableHelpTooltips) this.draggedObject.addHelp("lng: " + options[0] + "&#176;, lat: " + options[1] + "&#176;");
@@ -1293,7 +1296,7 @@ Threebox.prototype = {
 		this.lights.dirLight = new THREE.DirectionalLight(new THREE.Color('hsl(0, 0%, 100%)'), 0.25);
 		this.lights.dirLight.position.set(-30, 100, -100);
 		this.scene.add(this.lights.dirLight);
-
+		
 	},
 
 	realSunlight: function (helper = false) {
