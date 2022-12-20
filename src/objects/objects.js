@@ -622,7 +622,7 @@ Objects.prototype = {
 					if (_selected != value) {
 						_selected = value;
 						// Dispatch new event SelectedChange
-						obj.dispatchEvent({ type: 'SelectedChange', detail: obj });
+						obj.dispatchEvent({ type: 'SelectedChange', selected: _selected, detail: obj });
 					}
 				}
 			})

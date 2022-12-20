@@ -290,6 +290,7 @@ Threebox.prototype = {
 						let hyp = Math.sqrt(Math.pow(size.x, 2) + Math.pow(size.y, 2));
 						let ringSize = (hyp / 2) * tb.projectedUnitsPerMeter(map.getCenter().lat) + ringRadius;
 						ringSize = +(ringSize * 1.15).toFixed(5);
+						ringSize = Math.max(ringSize, 0.3);
 						
 						//if extrusion object selected, unselect
 						if (this.selectedFeature) {
