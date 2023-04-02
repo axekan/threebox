@@ -33,6 +33,8 @@ function CameraSync(map, camera, world) {
             _this.updateCamera();
         })
         .on('resize', function () {
+            const { clientWidth, clientHeight } = this.getCanvas();
+            this.tb.renderer.setSize(clientWidth, clientHeight);
             _this.setupCamera();
         })
 
