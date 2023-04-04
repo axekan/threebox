@@ -30,7 +30,7 @@ function LabelRenderer(map) {
 	}
 
 	this.map.on('resize', function () {
-		this.renderer.setSize(this.map.getCanvas().clientWidth, this.map.getCanvas().clientHeight);
+		this.renderer?.setSize(this.map.getCanvas().clientWidth, this.map.getCanvas().clientHeight);
 	}.bind(this));
 
 	this.state = {
