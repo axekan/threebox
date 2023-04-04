@@ -98,7 +98,7 @@ Threebox.prototype = {
 		this.defaultCursor = 'default';
 		this.ringHeight = 1.5;
 
-		this.lights = this.initLights;
+		this.lights = structuredClone(this.initLights);
 		if (this.options.defaultLights) this.defaultLights();
 		if (this.options.realSunlight) this.realSunlight(this.options.realSunlightHelper);
 		this.skyLayerName = 'sky-layer';
@@ -1170,11 +1170,14 @@ Threebox.prototype = {
 	},
 
 	//[jscastro] This method set the sun light for a given datetime and lnglat
-	setSunlight: function (newDate = new Date(), coords) {
+	setSunlight: function (newDate, coords) {
 		if (!this.lights.dirLight || !this.options.realSunlight) {
 			console.warn("To use setSunlight it's required to set realSunlight : true in Threebox initial options.");
 			return;
 		}
+
+		// retain time if no new date provided
+		if (!newDate) newDate = this.lightDateTime ?? new Date();
 
 		var date = new Date(newDate.getTime());
 
