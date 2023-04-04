@@ -1180,7 +1180,7 @@ Threebox.prototype = {
 		if (!newDate) newDate = this.lightDateTime ?? new Date();
 
 		var date = new Date(newDate.getTime());
-
+		
 		if (coords) {
 			if (coords.lng && coords.lat) this.mapCenter = coords
 			else this.mapCenter = { lng: coords[0], lat: coords[1] };
@@ -1301,6 +1301,7 @@ Threebox.prototype = {
 		this.lights.dirLight.position.set(-30, 100, -100);
 		this.scene.add(this.lights.dirLight);
 		
+		this.repaint();
 	},
 
 	realSunlight: function (helper = false) {
@@ -1329,13 +1330,15 @@ Threebox.prototype = {
 		this.lights.hemiLight.groundColor.setHSL(0.11, 0.96, 0.14);
 		this.lights.hemiLight.position.set(0, 0, 50);
 		this.scene.add(this.lights.hemiLight);
-		this.setSunlight();
 
-		this.map.once('idle', () => {
-			this.setSunlight();
-			this.repaint();
-		});
+		// NOTE - This is hack to make sure sunlight updated here.
+		// setSunlight will return if the provided date is the same
+		// as the stored lightDateTime. So we add 1 ms to it.
+		const date = new Date(this.lightDateTime);
+		date.setMilliseconds(date.getMilliseconds() + 1);
+		this.setSunlight(date);
 
+		this.repaint();
 	},
 
 	setDefaultView: function (options, defOptions) {
