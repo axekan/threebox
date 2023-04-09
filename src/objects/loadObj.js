@@ -4,16 +4,16 @@
  */
 const utils = require("../utils/utils.js");
 const Objects = require('./objects.js');
-const OBJLoader = require("./loaders/OBJLoader.js");
+// const OBJLoader = require("./loaders/OBJLoader.js");
 const MTLLoader = require("./loaders/MTLLoader.js");
-const FBXLoader = require("./loaders/FBXLoader.js");
+// const FBXLoader = require("./loaders/FBXLoader.js");
 const GLTFLoader = require("./loaders/GLTFLoader.js");
-const ColladaLoader = require("./loaders/ColladaLoader.js");
-const objLoader = new OBJLoader();
+// const ColladaLoader = require("./loaders/ColladaLoader.js");
+// const objLoader = new OBJLoader();
 const materialLoader = new MTLLoader();
 const gltfLoader = new GLTFLoader();
-const fbxLoader = new FBXLoader();
-const daeLoader = new ColladaLoader();
+// const fbxLoader = new FBXLoader();
+// const daeLoader = new ColladaLoader();
 
 function loadObj(options, cb, promise) {
 
@@ -24,21 +24,21 @@ function loadObj(options, cb, promise) {
 	if (!options.type) { options.type = 'mtl'; };
 	//[jscastro] support other models
 	switch (options.type) {
-		case "mtl":
-			// TODO: Support formats other than OBJ/MTL
-			loader = objLoader;
-			break;
+		// case "mtl":
+		// 	// TODO: Support formats other than OBJ/MTL
+		// 	loader = objLoader;
+		// 	break;
 		case "gltf":
 		case "glb":
 			// [jscastro] Support for GLTF/GLB
 			loader = gltfLoader;
 			break;
-		case "fbx":
-			loader = fbxLoader;
-			break;
-		case "dae":
-			loader = daeLoader;
-			break;
+		// case "fbx":
+		// 	loader = fbxLoader;
+		// 	break;
+		// case "dae":
+		// 	loader = daeLoader;
+		// 	break;
 	}
 
 	materialLoader.load(options.mtl, loadObject, () => (null), error => {
