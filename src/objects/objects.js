@@ -466,28 +466,7 @@ Objects.prototype = {
 					obj.model.traverse(function (c) {
 						if (c.isMesh) c.castShadow = true;
 					});
-					if (value) {
-						// we add the shadow plane automatically 
-						const s = obj.modelSize;
-						const sz = [s.x, s.y, s.z, obj.modelHeight];
-						const pSize = Math.max(...sz) * 10;
-						const pGeo = new THREE.PlaneBufferGeometry(pSize, pSize);
-						const pMat = new THREE.ShadowMaterial();
-						//const pMat = new THREE.MeshStandardMaterial({ color: 0x660000 });
-						pMat.opacity = 0.5;
-						let p = new THREE.Mesh(pGeo, pMat);
-						p.name = shadowPlane;
-						p.layers.enable(1); p.layers.disable(0); // it makes the object invisible for the raycaster
-						p.receiveShadow = value;
-						obj.add(p);
-					} else {
-						// or we remove it 
-						obj.traverse(function (c) {
-							if (c.isMesh && c.material instanceof THREE.ShadowMaterial)
-								obj.remove(c);
-						});
-
-					}
+					if (value) tb.createShadowLayer();
 					_castShadow = value;
 
 				}
@@ -496,6 +475,7 @@ Objects.prototype = {
 			//[jscastro] added method to position the shadow box on the floor depending the object height
 			obj.setReceiveShadowFloor = function () {
 				if (obj.castShadow) {
+					return;
 					let sp = obj.shadowPlane, p = sp.position, r = sp.rotation;
 					p.z = -obj.modelHeight;
 					r.y = obj.rotation.y;

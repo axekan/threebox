@@ -320,7 +320,7 @@ Threebox.prototype = {
 					
 						// the actual ring
 						let geom = new THREE.TorusGeometry(ringSize, 0.12, 30, 25);
-						let material = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.DoubleSide, transparent: true, opacity: 0 }); 
+						let material = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.BackSide, transparent: true, opacity: 0, visible: false }); 
 						let mesh = new THREE.Mesh(geom, material);
 
 						// thinner ring for displaying
@@ -848,6 +848,25 @@ Threebox.prototype = {
 		}
 	},
 
+	createShadowLayer: function() {
+		if (this.shadowPlane) return;
+
+		// arbitrary large enough size
+		const size = 3000
+		const geom = new THREE.PlaneBufferGeometry(size, size);
+		const material = new THREE.ShadowMaterial();
+		// const material = new THREE.MeshStandardMaterial({ color: 0x660000 });
+		material.opacity = 0.5;
+		const mesh = new THREE.Mesh(geom, material);
+		mesh.name = "shadowPlane";
+		mesh.layers.enable(1);
+		mesh.layers.disable(0);
+		mesh.receiveShadow = true;
+
+		this.shadowPlane = mesh;
+		this.scene.add(mesh);
+	},
+
 	// Objects
 	sphere: function (options) {
 		this.setDefaultView(options, this.options);
@@ -1314,7 +1333,7 @@ Threebox.prototype = {
 			this.lights.dirLightHelper = new THREE.DirectionalLightHelper(this.lights.dirLight, 5);
 			this.scene.add(this.lights.dirLightHelper);
 		}
-		let d2 = 1000; let r2 = 2; let mapSize2 = 8192;
+		let d2 = 1000; let r2 = 2; let mapSize2 = 4096;
 		this.lights.dirLight.castShadow = true;
 		this.lights.dirLight.shadow.radius = r2;
 		this.lights.dirLight.shadow.mapSize.width = mapSize2;
@@ -1323,7 +1342,7 @@ Threebox.prototype = {
 		this.lights.dirLight.shadow.camera.bottom = this.lights.dirLight.shadow.camera.left = -d2;
 		this.lights.dirLight.shadow.camera.near = 1;
 		this.lights.dirLight.shadow.camera.visible = true;
-		this.lights.dirLight.shadow.camera.far = 400000000;
+		this.lights.dirLight.shadow.camera.far = 400_000_000;
 
 		this.lights.hemiLight = new THREE.HemisphereLight(new THREE.Color(0xffffff), new THREE.Color(0xffffff), 0.6);
 		this.lights.hemiLight.color.setHSL(0.661, 0.96, 0.12);
