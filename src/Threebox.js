@@ -263,6 +263,97 @@ Threebox.prototype = {
 				alert('contextMenu'); //TODO: implement a callback
 			}
 
+			this.selectObject = function (targetObject) {
+				// calculate radius of ring from the bbox of the object
+				const ringRadius = 0.0075;
+				const size = targetObject.getSize();
+				let hyp = Math.sqrt(Math.pow(size.x, 2) + Math.pow(size.y, 2));
+				let ringSize = (hyp / 2) * tb.projectedUnitsPerMeter(map.getCenter().lat) + ringRadius;
+				ringSize = +(ringSize * 1.15).toFixed(5);
+				ringSize = Math.max(ringSize, 0.3);
+				
+				//if extrusion object selected, unselect
+				if (this.selectedFeature) {
+					this.unselectFeature(this.selectedFeature);
+				}
+				//if not selected yet, select it
+				if (!this.selectedObject) {
+					this.selectedObject = targetObject;
+					this.selectedObject.selected = true;
+				}
+				else if (this.selectedObject.uuid != targetObject.uuid) {
+					//it's a different object, restore the previous and select the new one
+					this.selectedObject.selected = false;
+					targetObject.selected = true;
+					this.selectedObject = targetObject;
+
+				} else if (this.selectedObject.uuid == targetObject.uuid) {
+					//deselect, reset and return
+					this.unselectObject();
+					this.isDrawing = false;
+					this.draggedObject = null;
+					this.selectedObject = null;
+					this.tb.remove(this.ring);
+					this.tb.remove(this.displayRing);
+					return;
+				}
+			
+				// the actual ring
+				let geom = new THREE.TorusGeometry(ringSize, 0.12, 30, 25);
+				let material = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.BackSide, transparent: true, opacity: 0, visible: false }); 
+				let mesh = new THREE.Mesh(geom, material);
+
+				// thinner ring for displaying
+				let geom2 = new THREE.TorusGeometry(ringSize, ringRadius, 30, 50);
+				let material2 = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.DoubleSide });
+				let mesh2 = new THREE.Mesh(geom2, material2);
+
+				this.ring = tb.Object3D({ obj: mesh, anchor: 'center', bbox: false });
+				this.ring.setCoords([...this.models[targetObject.userData.id].position, 0]);
+				this.ring.userData.ring = "hidden";
+				this.displayRing = tb.Object3D({ obj: mesh2, anchor: 'center', bbox: false });
+				this.displayRing.setCoords([...this.models[targetObject.userData.id].position, this.tb.ringHeight]);
+				/* this.ring.addTooltip('Håll inne för att rotera', [true, 'right', true, 1]); */
+
+				tb.add(this.displayRing);
+				tb.add(this.ring);
+
+				this.ring.addEventListener('ObjectMouseOver', () => {
+					this.getCanvasContainer().style.removeProperty('cursor');
+					this.getCanvasContainer().classList.add('cursor-rotate');
+					mesh2.material.color.setHex(0xdb0202);
+					this.once('mousedown', HandleClick);
+					this.once('touchstart', HandleClick);
+					this.once('touchend', offClick);
+					this.once('mouseup', offClick);
+				}, false);
+
+				this.ring.addEventListener('ObjectMouseOut', () => {
+					this.off('mousedown', HandleClick);
+					this.off('touchstart', HandleClick);
+					mesh2.material.color.setHex(0xffc000);
+					this.getCanvasContainer().classList.remove('cursor-rotate');
+				}, false);
+
+				function HandleClick(e) {
+					this.allowRotate = true;
+				}
+				function offClick(e) {
+					this.allowRotate = false;
+				}
+
+				this.once('cancel', () => {
+					this.allowRotate = false;
+					mesh2.material.color.setHex(0xffc000);
+					this.getCanvasContainer().classList.remove('cursor-rotate');
+				});
+
+				this.selectedObject.dispatchEvent({ type: 'Wireframed', detail: this.selectedObject });
+				this.selectedObject.dispatchEvent({ type: 'IsPlayingChanged', detail: this.selectedObject });
+
+				this.repaint = true;
+			} 
+
 			// onclick function
 			this.onTap = this.onClick = function (e) {
 				if (this.ring !== undefined) this.tb.remove(this.ring);
@@ -283,97 +374,9 @@ Threebox.prototype = {
 
 					let nearestObject = Threebox.prototype.findParent3DObject(intersects[0]);
 					if (nearestObject) {
-
-						// calculate radius of ring from the bbox of the object
-						const ringRadius = 0.0075;
-						const size = nearestObject.getSize();
-						let hyp = Math.sqrt(Math.pow(size.x, 2) + Math.pow(size.y, 2));
-						let ringSize = (hyp / 2) * tb.projectedUnitsPerMeter(map.getCenter().lat) + ringRadius;
-						ringSize = +(ringSize * 1.15).toFixed(5);
-						ringSize = Math.max(ringSize, 0.3);
-						
-						//if extrusion object selected, unselect
-						if (this.selectedFeature) {
-							this.unselectFeature(this.selectedFeature);
-						}
-						//if not selected yet, select it
-						if (!this.selectedObject) {
-							this.selectedObject = nearestObject;
-							this.selectedObject.selected = true;
-						}
-						else if (this.selectedObject.uuid != nearestObject.uuid) {
-							//it's a different object, restore the previous and select the new one
-							this.selectedObject.selected = false;
-							nearestObject.selected = true;
-							this.selectedObject = nearestObject;
-
-						} else if (this.selectedObject.uuid == nearestObject.uuid) {
-							//deselect, reset and return
-							this.unselectObject();
-							this.isDrawing = false;
-							this.draggedObject = null;
-							this.selectedObject = null;
-							this.tb.remove(this.ring);
-							this.tb.remove(this.displayRing);
-							return;
-						}
-					
-						// the actual ring
-						let geom = new THREE.TorusGeometry(ringSize, 0.12, 30, 25);
-						let material = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.BackSide, transparent: true, opacity: 0, visible: false }); 
-						let mesh = new THREE.Mesh(geom, material);
-
-						// thinner ring for displaying
-						let geom2 = new THREE.TorusGeometry(ringSize, ringRadius, 30, 50);
-						let material2 = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.DoubleSide });
-						let mesh2 = new THREE.Mesh(geom2, material2);
-
-						this.ring = tb.Object3D({ obj: mesh, anchor: 'center', bbox: false });
-						this.ring.setCoords([...this.models[nearestObject.userData.id].position, 0]);
-						this.ring.userData.ring = "hidden";
-						this.displayRing = tb.Object3D({ obj: mesh2, anchor: 'center', bbox: false });
-						this.displayRing.setCoords([...this.models[nearestObject.userData.id].position, this.tb.ringHeight]);
-						/* this.ring.addTooltip('Håll inne för att rotera', [true, 'right', true, 1]); */
-
-						tb.add(this.displayRing);
-						tb.add(this.ring);
-
-						this.ring.addEventListener('ObjectMouseOver', () => {
-							this.getCanvasContainer().style.removeProperty('cursor');
-							this.getCanvasContainer().classList.add('cursor-rotate');
-							mesh2.material.color.setHex(0xdb0202);
-							this.once('mousedown', HandleClick);
-							this.once('touchstart', HandleClick);
-							this.once('touchend', offClick);
-							this.once('mouseup', offClick);
-						}, false);
-
-						this.ring.addEventListener('ObjectMouseOut', () => {
-							this.off('mousedown', HandleClick);
-							this.off('touchstart', HandleClick);
-							mesh2.material.color.setHex(0xffc000);
-							this.getCanvasContainer().classList.remove('cursor-rotate');
-						}, false);
-
-						function HandleClick(e) {
-							this.allowRotate = true;
-						}
-						function offClick(e) {
-							this.allowRotate = false;
-						}
-
-						this.once('cancel', () => {
-							this.allowRotate = false;
-							mesh2.material.color.setHex(0xffc000);
-							this.getCanvasContainer().classList.remove('cursor-rotate');
-						});
-
-						this.selectedObject.dispatchEvent({ type: 'Wireframed', detail: this.selectedObject });
-						this.selectedObject.dispatchEvent({ type: 'IsPlayingChanged', detail: this.selectedObject });
-
-						this.repaint = true;
-						if (e.preventDefault !== undefined) e.preventDefault();
+						this.selectObject(nearestObject);
 					}
+					if (e.preventDefault !== undefined) e.preventDefault();
 				}
 				else {
 					let features = [];
