@@ -311,7 +311,7 @@ Threebox.prototype = {
 				this.ring = tb.Object3D({ obj: mesh, anchor: 'center', bbox: false });
 				this.ring.setCoords([...this.models[targetObject.userData.id].position, 0]);
 				this.ring.userData.ring = "hidden";
-				this.displayRing = tb.Object3D({ obj: mesh2, anchor: 'center', bbox: false });
+				this.displayRing = tb.Object3D({ obj: mesh2, anchor: 'center', bbox: false, raycasted: false });
 				this.displayRing.setCoords([...this.models[targetObject.userData.id].position, this.tb.ringHeight]);
 				/* this.ring.addTooltip('Håll inne för att rotera', [true, 'right', true, 1]); */
 
