@@ -307,12 +307,13 @@ Threebox.prototype = {
 				let geom2 = new THREE.TorusGeometry(ringSize, ringRadius, 30, 50);
 				let material2 = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.DoubleSide });
 				let mesh2 = new THREE.Mesh(geom2, material2);
-
+				
+				const coords = targetObject.coordinates
 				this.ring = tb.Object3D({ obj: mesh, anchor: 'center', bbox: false });
-				this.ring.setCoords([...this.models[targetObject.userData.id].position, 0]);
+				this.ring.setCoords([...coords, 0]);
 				this.ring.userData.ring = "hidden";
 				this.displayRing = tb.Object3D({ obj: mesh2, anchor: 'center', bbox: false, raycasted: false });
-				this.displayRing.setCoords([...this.models[targetObject.userData.id].position, this.tb.ringHeight]);
+				this.displayRing.setCoords([...coords, this.tb.ringHeight]);
 				/* this.ring.addTooltip('Håll inne för att rotera', [true, 'right', true, 1]); */
 
 				tb.add(this.displayRing);
