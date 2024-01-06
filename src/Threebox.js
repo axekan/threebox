@@ -96,7 +96,6 @@ Threebox.prototype = {
 		this.gridStep = 7;// decimals to adjust the lnglat grid step, 6 = 11.1cm
 		this.altitudeStep = 0.1; // 1px = 0.1m = 10cm
 		this.defaultCursor = 'default';
-		this.ringHeight = 1.5;
 
 		this.lights = structuredClone(this.initLights);
 		if (this.options.defaultLights) this.defaultLights();
@@ -176,7 +175,7 @@ Threebox.prototype = {
 					const touch = e.originalEvent.targetTouches[0];
 					if (touch.clientX != null) {
 						return {
-							x: touch.pageX   - getOffset(canvas, 'offsetLeft'),
+							x: touch.pageX - getOffset(canvas, 'offsetLeft'),
 							y: touch.clientY - getOffset(canvas, 'offsetTop')
 						};
 					}
@@ -271,7 +270,7 @@ Threebox.prototype = {
 				let ringSize = (hyp / 2) * tb.projectedUnitsPerMeter(map.getCenter().lat) + ringRadius;
 				ringSize = +(ringSize * 1.15).toFixed(5);
 				ringSize = Math.max(ringSize, 0.3);
-				
+
 				//if extrusion object selected, unselect
 				if (this.selectedFeature) {
 					this.unselectFeature(this.selectedFeature);
@@ -297,23 +296,29 @@ Threebox.prototype = {
 					this.tb.remove(this.displayRing);
 					return;
 				}
-			
+
+				if (this.ring) tb.remove(this.ring);
+				if (this.displayRing) tb.remove(this.displayRing);
+
 				// the actual ring
-				let geom = new THREE.TorusGeometry(ringSize, 0.12, 30, 25);
-				let material = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.BackSide, transparent: true, opacity: 0, visible: false }); 
+				let geom = new THREE.TorusGeometry(ringSize, ringRadius * 4, 30, 25);
+				let material = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.BackSide, transparent: true, opacity: 0, visible: false });
+				// let material = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.DoubleSide, transparent: true, opacity: 0.5, visible: true });
 				let mesh = new THREE.Mesh(geom, material);
 
 				// thinner ring for displaying
 				let geom2 = new THREE.TorusGeometry(ringSize, ringRadius, 30, 50);
 				let material2 = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.DoubleSide });
 				let mesh2 = new THREE.Mesh(geom2, material2);
-				
+
+				const ringHeight = size.z / 4;
+
 				const coords = targetObject.coordinates
 				this.ring = tb.Object3D({ obj: mesh, anchor: 'center', bbox: false });
-				this.ring.setCoords([...coords, 0]);
+				this.ring.setCoords([...coords, ringHeight - this.ring.getSize().y / 2]);
 				this.ring.userData.ring = "hidden";
 				this.displayRing = tb.Object3D({ obj: mesh2, anchor: 'center', bbox: false, raycasted: false });
-				this.displayRing.setCoords([...coords, this.tb.ringHeight]);
+				this.displayRing.setCoords([...coords, ringHeight]);
 				/* this.ring.addTooltip('Håll inne för att rotera', [true, 'right', true, 1]); */
 
 				tb.add(this.displayRing);
@@ -353,7 +358,7 @@ Threebox.prototype = {
 				this.selectedObject.dispatchEvent({ type: 'IsPlayingChanged', detail: this.selectedObject });
 
 				this.repaint = true;
-			} 
+			}
 
 			// onclick function
 			this.onTap = this.onClick = function (e) {
@@ -456,12 +461,11 @@ Threebox.prototype = {
 					let options = [Number((coords.lng + lngDiff).toFixed(this.tb.gridStep)), Number((coords.lat + latDiff).toFixed(this.tb.gridStep)), this.draggedObject.modelHeight];
 					
 					// move ring(s) along with the object being dragged
-					// the rings don't have an id in userData
-					tb.world.children.forEach((obj) => {
-						if (obj.userData.id != null) return;
-						if (obj.userData.ring == 'hidden') obj.setCoords([options[0], options[1], 0]);
-						else obj.setCoords([options[0], options[1], this.tb.ringHeight]);
-					});
+					if (this.ring && this.displayRing) {
+						const ringHeight = this.draggedObject.getSize().z / 4;
+						this.ring.setCoords([options[0], options[1], ringHeight - this.ring.getSize().y / 2]);
+						this.displayRing.setCoords([options[0], options[1], ringHeight]);
+					}
 					this.draggedObject.setCoords(options);
 					if (map.tb.enableHelpTooltips) this.draggedObject.addHelp("lng: " + options[0] + "&#176;, lat: " + options[1] + "&#176;");
 					return;
@@ -557,12 +561,12 @@ Threebox.prototype = {
 				intersectionExists = typeof intersects[0] == 'object';
 
 				if (!intersectionExists && this.selectedObject) {
-						this.unselectObject();
-						this.isDrawing = false;
-						this.draggedObject = null;
-						this.selectedObject = null;
-						this.tb.remove(this.ring);
-						this.tb.remove(this.displayRing);
+					this.unselectObject();
+					this.isDrawing = false;
+					this.draggedObject = null;
+					this.selectedObject = null;
+					this.tb.remove(this.ring);
+					this.tb.remove(this.displayRing);
 				}
 
 				this.touchStartInfo = {
@@ -1203,7 +1207,7 @@ Threebox.prototype = {
 		if (!newDate) newDate = this.lightDateTime ?? new Date();
 
 		var date = new Date(newDate.getTime());
-		
+
 		if (coords) {
 			if (coords.lng && coords.lat) this.mapCenter = coords
 			else this.mapCenter = { lng: coords[0], lat: coords[1] };
@@ -1239,13 +1243,18 @@ Threebox.prototype = {
 		this.updateLightHelper();
 		if (this.map.loaded()) {
 			this.updateSunGround(this.sunPosition);
-			this.map.setLight({
+			const properties = {
 				anchor: 'map',
 				position: [3, 180 + this.sunPosition.azimuth * 180 / Math.PI, 90 - this.sunPosition.altitude * 180 / Math.PI],
 				intensity: Math.cos(this.sunPosition.altitude), //0.4,
 				color: `hsl(40, ${50 * Math.cos(this.sunPosition.altitude)}%, ${Math.max(20, 20 + (96 * Math.sin(this.sunPosition.altitude)))}%)`
 
-			}, { duration: 0 });
+			}
+			this.map.setLights([{
+				id: "flat",
+				type: "flat",
+				properties,
+			}])
 			if (this.sky) { this.updateSunSky(this.getSunSky(date, this.sunPosition)); }
 		}
 	},
@@ -1323,7 +1332,7 @@ Threebox.prototype = {
 		this.lights.dirLight = new THREE.DirectionalLight(new THREE.Color('hsl(0, 0%, 100%)'), 0.25);
 		this.lights.dirLight.position.set(-30, 100, -100);
 		this.scene.add(this.lights.dirLight);
-		
+
 		this.repaint();
 	},
 

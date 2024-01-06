@@ -14,8 +14,8 @@
     },
     "homepage": "https://github.com/jscastro76/threebox#readme",
     "scripts": {
-        "build": "browserify -p tinyify exports.js > dist/threebox.min.js && ncp ./examples/css/threebox.css ./dist/threebox.css --stopOnErr",
-        "dev": "watchify exports.js --verbose -o dist/threebox.js ",
+        "dev": "esbuild main.js --bundle --outfile=./dist/threebox.js --format=esm --target=es2021 --watch --sourcemap=inline",
+        "build": "esbuild main.js --bundle --outfile=./dist/threebox.min.js --format=esm --target=es2021 --minify",
         "all": "browserify -p tinyify exports.js > dist/threebox.min.js && watchify exports.js --verbose -o dist/threebox.js ",
         "test": "browserify tests/threebox-tests.js > tests/threebox-tests-bundle.js",
         "start": "node server.js",
@@ -28,6 +28,7 @@
     },
     "devDependencies": {
         "browserify": "^17.0.0",
+        "esbuild": "^0.19.11",
         "ncp": "^2.0.0",
         "tape": "^5.1.1",
         "tinyify": "^3.0.0",
