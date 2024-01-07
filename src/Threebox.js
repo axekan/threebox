@@ -94,6 +94,7 @@ Threebox.prototype = {
 		this.gridStep = 7;// decimals to adjust the lnglat grid step, 6 = 11.1cm
 		this.altitudeStep = 0.1; // 1px = 0.1m = 10cm
 		this.defaultCursor = 'default';
+		this.rotateRingSizeFactor = 6; // size of the rotate-ring relative to the thinner visible ring
 
 		this.lights = structuredClone(this.initLights);
 		if (this.options.defaultLights) this.defaultLights();
@@ -302,7 +303,8 @@ Threebox.prototype = {
 				if (this.displayRing) this.tb.remove(this.displayRing);
 
 				// the actual ring
-				let geom = new THREE.TorusGeometry(ringSize, ringRadius * 4, 30, 25);
+				const tubeSize = ringRadius * this.tb.rotateRingSizeFactor;
+				let geom = new THREE.TorusGeometry(ringSize, tubeSize, 30, 25);
 				let material = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.BackSide, transparent: true, opacity: 0, visible: false });
 				// let material = new THREE.MeshStandardMaterial({ color: 0xffc000, side: THREE.DoubleSide, transparent: true, opacity: 0.5, visible: true });
 				let mesh = new THREE.Mesh(geom, material);
@@ -316,7 +318,8 @@ Threebox.prototype = {
 
 				const coords = targetObject.coordinates
 				this.ring = this.tb.Object3D({ obj: mesh, anchor: 'center', bbox: false });
-				this.ring.setCoords([...coords, ringHeight - this.ring.getSize().y / 2]);
+				const heightMeters = tubeSize / this.tb.projectedUnitsPerMeter(this.getCenter().lat);
+				this.ring.setCoords([...coords, ringHeight - heightMeters / 2]);
 				this.ring.userData.ring = "hidden";
 				this.displayRing = this.tb.Object3D({ obj: mesh2, anchor: 'center', bbox: false, raycasted: false });
 				this.displayRing.setCoords([...coords, ringHeight]);
@@ -457,9 +460,10 @@ Threebox.prototype = {
 					
 					// move ring(s) along with the object being dragged
 					if (this.ring && this.displayRing) {
-						const ringHeight = this.draggedObject.getSize().z / 4;
-						this.ring.setCoords([options[0], options[1], ringHeight - this.ring.getSize().y / 2]);
-						this.displayRing.setCoords([options[0], options[1], ringHeight]);
+						// reuse height since it should not have changed from dragging object'
+						// NOTE - this does not work if the object is dragged along z-axis
+						this.ring.setCoords([options[0], options[1], this.ring.coordinates[2]]);
+						this.displayRing.setCoords([options[0], options[1], this.displayRing.coordinates[2]]);
 					}
 					this.draggedObject.setCoords(options);
 					if (map.tb.enableHelpTooltips) this.draggedObject.addHelp("lng: " + options[0] + "&#176;, lat: " + options[1] + "&#176;");
