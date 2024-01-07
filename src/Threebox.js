@@ -21,8 +21,6 @@ const tube = require("./objects/tube.js");
 const LabelRenderer = require("./objects/LabelRenderer.js");
 const BuildingShadows = require("./objects/effects/BuildingShadows.js");
 
-const isTap = require('./utils/isTap');
-
 function Threebox(map, glContext, options) {
 
 	this.init(map, glContext, options);
@@ -267,7 +265,7 @@ Threebox.prototype = {
 				const ringRadius = 0.0075;
 				const size = targetObject.getSize();
 				let hyp = Math.sqrt(Math.pow(size.x, 2) + Math.pow(size.y, 2));
-				let ringSize = (hyp / 2) * tb.projectedUnitsPerMeter(map.getCenter().lat) + ringRadius;
+				let ringSize = (hyp / 2) * this.tb.projectedUnitsPerMeter(map.getCenter().lat) + ringRadius;
 				ringSize = +(ringSize * 1.15).toFixed(5);
 				ringSize = Math.max(ringSize, 0.3);
 
@@ -279,26 +277,29 @@ Threebox.prototype = {
 				if (!this.selectedObject) {
 					this.selectedObject = targetObject;
 					this.selectedObject.selected = true;
-				}
-				else if (this.selectedObject.uuid != targetObject.uuid) {
+				} else if (this.selectedObject.uuid != targetObject.uuid) {
 					//it's a different object, restore the previous and select the new one
-					this.selectedObject.selected = false;
-					targetObject.selected = true;
-					this.selectedObject = targetObject;
+					this.unselectObject();
+					this.draggedObject = null;
+					this.selectedObject = null;
+					
+					this.tb.remove(this.ring);
+					this.tb.remove(this.displayRing);
 
+					this.selectedObject = targetObject;
+					this.selectedObject.selected = true;
 				} else if (this.selectedObject.uuid == targetObject.uuid) {
 					//deselect, reset and return
 					this.unselectObject();
-					this.isDrawing = false;
 					this.draggedObject = null;
 					this.selectedObject = null;
-					this.tb.remove(this.ring);
-					this.tb.remove(this.displayRing);
+					
+					this.tb.removeRings()
 					return;
 				}
 
-				if (this.ring) tb.remove(this.ring);
-				if (this.displayRing) tb.remove(this.displayRing);
+				if (this.ring) this.tb.remove(this.ring);
+				if (this.displayRing) this.tb.remove(this.displayRing);
 
 				// the actual ring
 				let geom = new THREE.TorusGeometry(ringSize, ringRadius * 4, 30, 25);
@@ -314,15 +315,15 @@ Threebox.prototype = {
 				const ringHeight = size.z / 4;
 
 				const coords = targetObject.coordinates
-				this.ring = tb.Object3D({ obj: mesh, anchor: 'center', bbox: false });
+				this.ring = this.tb.Object3D({ obj: mesh, anchor: 'center', bbox: false });
 				this.ring.setCoords([...coords, ringHeight - this.ring.getSize().y / 2]);
 				this.ring.userData.ring = "hidden";
-				this.displayRing = tb.Object3D({ obj: mesh2, anchor: 'center', bbox: false, raycasted: false });
+				this.displayRing = this.tb.Object3D({ obj: mesh2, anchor: 'center', bbox: false, raycasted: false });
 				this.displayRing.setCoords([...coords, ringHeight]);
 				/* this.ring.addTooltip('Håll inne för att rotera', [true, 'right', true, 1]); */
 
-				tb.add(this.displayRing);
-				tb.add(this.ring);
+				this.tb.add(this.displayRing);
+				this.tb.add(this.ring);
 
 				this.ring.addEventListener('ObjectMouseOver', () => {
 					this.getCanvasContainer().style.removeProperty('cursor');
@@ -360,11 +361,9 @@ Threebox.prototype = {
 				this.repaint = true;
 			}
 
-			// onclick function
-			this.onTap = this.onClick = function (e) {
-				if (this.ring !== undefined) this.tb.remove(this.ring);
-				if (this.displayRing !== undefined) this.tb.remove(this.displayRing);
-				let intersectionExists
+			this.onClick = function (e) {
+				this.tb.removeRings();
+				let intersectionExists;
 				let intersects = [];
 				if (map.tb.enableSelectingObjects) {
 					//raycast only if we are in a custom layer, for other layers go to the else, this avoids duplicated calls to raycaster
@@ -373,58 +372,54 @@ Threebox.prototype = {
 				intersectionExists = typeof intersects[0] == 'object';
 				// if intersect exists, highlight it
 				if (intersectionExists) {
-
 					e.originalEvent.cancelBubble = true;
-					this.isDrawing = true;
-					this.fire('cancelActions');
 
 					let nearestObject = Threebox.prototype.findParent3DObject(intersects[0]);
-					if (nearestObject) {
+					// if we have the same object, we continue to just deselect it
+					const sameObject = nearestObject?.uuid === this.selectedObject?.uuid;
+					if (nearestObject && !sameObject) {
 						this.selectObject(nearestObject);
-					}
-					if (e.preventDefault !== undefined) e.preventDefault();
-				}
-				else {
-					let features = [];
-					if (map.tb.enableSelectingFeatures) {
-						features = this.queryRenderedFeatures(e.point);
-					}
-					//now let's check the extrusion layer objects
-					if (features.length > 0) {
-
-						if (features[0].layer.type == 'fill-extrusion' && typeof features[0].id != 'undefined') {
-
-							//if 3D object selected, unselect
-							if (this.selectedObject) {
-								this.unselectObject();
-							}
-
-							//if not selected yet, select it
-							if (!this.selectedFeature) {
-								this.selectFeature(features[0])
-							}
-							else if (this.selectedFeature.id != features[0].id) {
-								//it's a different feature, restore the previous and select the new one
-								this.unselectFeature(this.selectedFeature);
-								this.selectFeature(features[0])
-
-							} else if (this.selectedFeature.id == features[0].id) {
-								//deselect, reset and return
-								this.unselectFeature(this.selectedFeature);
-								return;
-							}
-
-						}
-					}
-					else if (this.selectedObject !== null && this.selectedObject !== undefined) {
-						this.unselectObject();
-						this.isDrawing = false;
-						this.draggedObject = null;
-						this.selectedObject = null;
-						this.tb.remove(this.ring);
-						this.tb.remove(this.displayRing);
+						if (e.preventDefault !== undefined) e.preventDefault();
 						return;
 					}
+				}
+				
+				let features = [];
+				if (map.tb.enableSelectingFeatures) {
+					features = this.queryRenderedFeatures(e.point);
+				}
+				//now let's check the extrusion layer objects
+				if (features.length > 0) {
+
+					if (features[0].layer.type == 'fill-extrusion' && typeof features[0].id != 'undefined') {
+
+						//if 3D object selected, unselect
+						if (this.selectedObject) {
+							this.unselectObject();
+						}
+
+						//if not selected yet, select it
+						if (!this.selectedFeature) {
+							this.selectFeature(features[0])
+						}
+						else if (this.selectedFeature.id != features[0].id) {
+							//it's a different feature, restore the previous and select the new one
+							this.unselectFeature(this.selectedFeature);
+							this.selectFeature(features[0])
+
+						} else if (this.selectedFeature.id == features[0].id) {
+							//deselect, reset and return
+							this.unselectFeature(this.selectedFeature);
+							return;
+						}
+
+					}
+				} else if (this.selectedObject) {
+					this.unselectObject();
+					this.draggedObject = null;
+					this.selectedObject = null;
+					this.tb.remove(this.ring);
+					this.tb.remove(this.displayRing);
 				}
 			}
 
@@ -562,7 +557,6 @@ Threebox.prototype = {
 
 				if (!intersectionExists && this.selectedObject) {
 					this.unselectObject();
-					this.isDrawing = false;
 					this.draggedObject = null;
 					this.selectedObject = null;
 					this.tb.remove(this.ring);
@@ -624,14 +618,6 @@ Threebox.prototype = {
 
 				if (e.type == 'touchend' && this.overedObject) {
 					this.outObject();
-				}
-
-				if (isTap(this.touchStartInfo, {
-					time: new Date().getTime(),
-					point: e.point
-				})) {
-					this.fire('tap', e); // tap event if touch was short enough
-					return;
 				}
 
 				// Set a UI indicator for dragging.
@@ -721,13 +707,19 @@ Threebox.prototype = {
 			this.on('touchstart', this.onTouchStart);
 			this.on('touchmove', this.onTouchMove);
 			this.on('touchend', this.onTouchEnd);
-			this.on('tap', this.onTap);
 
 			document.addEventListener('keydown', onKeyDown.bind(this), true);
 			document.addEventListener('keyup', onKeyUp.bind(this));
 
 		});
 
+	},
+
+	removeRings: function () {
+		if (this.ring) this.tb.remove(this.ring);
+		if (this.displayRing) this.tb.remove(this.displayRing);
+		this.ring = null;
+		this.displayRing = null;
 	},
 
 	//[jscastro] added property to manage an athmospheric sky layer
@@ -1136,7 +1128,6 @@ Threebox.prototype = {
 		if (this.map.selectedObject && obj.uuid == this.map.selectedObject.uuid) this.map.unselectObject();
 		if (this.map.draggedObject && obj.uuid == this.map.draggedObject.uuid) this.map.draggedObject = null;
 		if (obj.dispose) obj.dispose();
-		this.map.isDrawing = false;
 		this.world.remove(obj);
 		obj = null;
 	},
