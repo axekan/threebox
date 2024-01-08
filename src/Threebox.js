@@ -380,6 +380,8 @@ Threebox.prototype = {
 					let nearestObject = Threebox.prototype.findParent3DObject(intersects[0]);
 					// if we have the same object, we continue to just deselect it
 					const sameObject = nearestObject?.uuid === this.selectedObject?.uuid;
+					const isRing = nearestObject === this.ring || nearestObject === this.displayRing;
+					if (isRing) return;
 					if (nearestObject && !sameObject) {
 						this.selectObject(nearestObject);
 						if (e.preventDefault !== undefined) e.preventDefault();
