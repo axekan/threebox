@@ -20,7 +20,7 @@ function LabelRenderer(map) {
 	this.scene, this.camera;
 
 	this.dispose = function () {
-		this.map.getCanvasContainer().removeChild(this.renderer.domElement)
+		this.map.getCanvasContainer()?.removeChild(this.renderer.domElement)
 		this.renderer.domElement.remove();
 		this.renderer = {};
 	}
