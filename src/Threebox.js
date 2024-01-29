@@ -858,7 +858,7 @@ Threebox.prototype = {
 		if (this.shadowPlane) return;
 
 		// arbitrary large enough size
-		const size = 3000
+		const size = 10_000
 		const geom = new THREE.PlaneBufferGeometry(size, size);
 		const material = new THREE.ShadowMaterial();
 		// const material = new THREE.MeshStandardMaterial({ color: 0x660000 });
@@ -1343,7 +1343,7 @@ Threebox.prototype = {
 			this.lights.dirLightHelper = new THREE.DirectionalLightHelper(this.lights.dirLight, 5);
 			this.scene.add(this.lights.dirLightHelper);
 		}
-		let d2 = 1000; let r2 = 2; let mapSize2 = 4096;
+		let d2 = 4096; let r2 = 2; let mapSize2 = 4096;
 		this.lights.dirLight.castShadow = true;
 		this.lights.dirLight.shadow.radius = r2;
 		this.lights.dirLight.shadow.mapSize.width = mapSize2;
